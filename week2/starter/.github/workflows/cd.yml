@@ -10,7 +10,8 @@ name: CD — Deploy to GKE
 on:
   push:
     branches:
-      - main  # Only deploy on main branch merges
+      - main
+      - week2
 
 env:
   GCP_PROJECT_ID: ops-ai-shreya

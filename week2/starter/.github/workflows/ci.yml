@@ -10,10 +10,11 @@ on:
   push:
     branches:
       - main
-      - develop    # Also test feature branches before merging
+      - develop
+      - week2
   pull_request:
     branches:
-      - main       # Validate all PRs to main
+      - main
 
 jobs:
   # Job 1: Test the application (runs on every push/PR)
@@ -43,7 +44,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     # Only build on main pushes (don't build every PR)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/week2')
 
     steps:
     - name: Checkout code
