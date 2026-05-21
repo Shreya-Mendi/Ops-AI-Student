@@ -76,6 +76,11 @@ jobs:
           ${{ env.ARTIFACT_REGISTRY_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.IMAGE_NAME }}:latest
           ${{ env.ARTIFACT_REGISTRY_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
+    # Apply latest k8s manifests (configmap, deployment, service)
+    - name: Apply Kubernetes manifests
+      run: |
+        kubectl apply -f week2/starter/k8s/
+
     # Update deployment with new image (rolling update - no downtime)
     - name: Update Deployment image
       run: |

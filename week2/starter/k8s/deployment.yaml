@@ -41,8 +41,7 @@ spec:
             gsutil cp gs://${GCS_BUCKET}/lgbm_demand_model.txt /data/processed/
             gsutil cp gs://${GCS_BUCKET}/zone_hour_avg_fare.parquet /data/processed/
             gsutil cp gs://${GCS_BUCKET}/taxi_zones.geojson /data/processed/
-            mkdir -p /metadata-vol/Lookups
-            gsutil cp gs://${GCS_BUCKET}/taxi_zone_lookup.csv /metadata-vol/Lookups/
+            gsutil cp gs://${GCS_BUCKET}/taxi_zone_lookup.csv /metadata-vol/
         env:
         - name: GCS_BUCKET
           valueFrom:

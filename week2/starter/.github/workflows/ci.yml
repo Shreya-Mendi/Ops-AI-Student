@@ -10,8 +10,8 @@ on:
   push:
     branches:
       - main
-      - develop
-      - week2
+      # - develop
+      # - week2  # disabled until deployment is stable
   pull_request:
     branches:
       - main
