@@ -2,6 +2,7 @@
 Precomputes all demand aggregations from demand_enriched.parquet at startup.
 Keeps only ~44K rows in memory (zone × hour × dow profile), not 6.3M raw rows.
 """
+import logging
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -11,10 +12,23 @@ import json
 import requests
 from functools import lru_cache
 
+logger = logging.getLogger(__name__)
+
 _ROOT = Path(__file__).parent.parent.parent
 DATA_PATH   = _ROOT / "data" / "processed" / "demand_enriched.parquet"
 LOOKUP_PATH = _ROOT / "Meta Data" / "Lookups" / "taxi_zone_lookup.csv"
 MODEL_PATH  = _ROOT / "data" / "processed" / "lgbm_demand_model.txt"
+
+_last_valid_data = None   # cache for graceful degradation fallback
+_startup_validation = None  # stores the validation result from the last _load() call
+
+
+def _validate_demand_df_cached() -> dict:
+    """Return the cached validation result from startup — used by the /health/ready endpoint."""
+    global _startup_validation
+    if _startup_validation is None:
+        return {"is_valid": False, "num_issues": 0, "issues": [], "load_failed": True}
+    return _startup_validation
 
 # Fixed reference point: end of 2nd week in Feb 2026 (the latest complete month)
 # Data before this date is actual; from this point forward uses model predictions
@@ -71,52 +85,142 @@ FEATURES = [
 ]
 
 
+_KNOWN_HOLIDAYS = {
+    (1,1),(1,15),(1,16),(1,20),(2,17),(3,17),(5,26),
+    (7,4),(9,1),(10,13),(10,31),(11,11),(11,27),(12,24),(12,25),(12,31),
+}
+
+
+def _validate_demand_df(df: pd.DataFrame) -> dict:
+    """Lightweight validation checks run at startup before building the demand profile."""
+    issues = []
+
+    n_dupes = len(df) - df.drop_duplicates(subset=['PULocationID', 'time_bucket']).shape[0]
+    if n_dupes > 0:
+        issues.append({'type': 'duplicates', 'count': n_dupes, 'severity': 'high'})
+
+    if 'trip_count' in df.columns:
+        bad_neg = int((df['trip_count'] < 0).sum())
+        bad_ext = int((df['trip_count'] > 5000).sum())
+        if bad_neg > 0:
+            issues.append({'type': 'out_of_range_trip_count', 'count': bad_neg,
+                           'direction': 'negative', 'severity': 'critical'})
+        if bad_ext > 0:
+            issues.append({'type': 'out_of_range_trip_count', 'count': bad_ext,
+                           'direction': 'extreme_high', 'severity': 'critical'})
+
+    if 'is_holiday' in df.columns and 'time_bucket' in df.columns:
+        holiday_rows = df[df['is_holiday'] == 1]
+        if len(holiday_rows) > 0:
+            false_count = int(
+                (~holiday_rows['time_bucket'].apply(lambda t: (t.month, t.day) in _KNOWN_HOLIDAYS)).sum()
+            )
+            if false_count / len(df) > 0.001:
+                issues.append({'type': 'holiday_mislabeling', 'count': false_count, 'severity': 'medium'})
+
+    return {'is_valid': len(issues) == 0, 'num_issues': len(issues), 'issues': issues}
+
+
+def _apply_degradation(df: pd.DataFrame, issues: list) -> pd.DataFrame:
+    """Apply minimal in-place fixes so the API keeps serving with degraded data."""
+    issue_types = {i['type'] for i in issues}
+    df = df.copy()
+
+    if 'duplicates' in issue_types:
+        before = len(df)
+        df = df.drop_duplicates(subset=['PULocationID', 'time_bucket'], keep='first')
+        logger.warning(f"[data quality] Dropped {before - len(df):,} duplicate rows")
+
+    if 'out_of_range_trip_count' in issue_types and 'trip_count' in df.columns:
+        neg_mask = df['trip_count'] < 0
+        ext_mask = df['trip_count'] > 5000
+        if neg_mask.any():
+            df.loc[neg_mask, 'trip_count'] = 0
+            logger.warning(f"[data quality] Set {neg_mask.sum():,} negative trip_count values to 0")
+        if ext_mask.any():
+            zone_medians = df[~ext_mask].groupby('PULocationID')['trip_count'].median()
+            for zone_id, idx in df[ext_mask].groupby('PULocationID').groups.items():
+                df.loc[idx, 'trip_count'] = int(zone_medians.get(zone_id, df['trip_count'].median()))
+            logger.warning(f"[data quality] Replaced {ext_mask.sum():,} extreme trip_count values with zone medians")
+
+    if 'holiday_mislabeling' in issue_types:
+        logger.warning("[data quality] Holiday mislabeling detected — not auto-corrected, operators should review calendar labels")
+
+    return df
+
+
+def _get_last_valid_or_raise(error: Exception):
+    global _last_valid_data
+    if _last_valid_data is not None:
+        logger.error(f"[data quality] Data load failed ({error}), falling back to last valid cached profile")
+        return _last_valid_data
+    raise error
+
+
 def _load():
+    global _last_valid_data, _startup_validation
     print("[NYC Cab Analytics] Loading demand profile...")
-    df = pd.read_parquet(
-        DATA_PATH,
-        columns=["PULocationID", "hour", "dayofweek", "trip_count", "is_holiday", "time_bucket"],
-    )
-    
-    # Identify specific holidays
-    df['time_bucket'] = pd.to_datetime(df['time_bucket'])
-    df['holiday_name'] = df.apply(
-        lambda row: _identify_holiday(row['time_bucket']) if row['is_holiday'] == 1 else "regular",
-        axis=1
-    )
-    
-    # Profile 1: Regular days (non-holidays)
-    regular_df = df[df["is_holiday"] == 0].drop(columns=["is_holiday", "time_bucket", "holiday_name"])
-    regular_profile = (
-        regular_df.groupby(["PULocationID", "hour", "dayofweek"], as_index=False)["trip_count"]
-        .mean()
-        .rename(columns={"trip_count": "avg"})
-    )
-    regular_profile["avg"] = regular_profile["avg"].round(3)
-    regular_profile["holiday_name"] = "regular"
-    
-    # Profile 2: Holiday-specific demand
-    holiday_df = df[df["is_holiday"] == 1].copy()
-    holiday_profile = (
-        holiday_df.groupby(["PULocationID", "hour", "holiday_name"], as_index=False)["trip_count"]
-        .mean()
-        .rename(columns={"trip_count": "avg"})
-    )
-    holiday_profile["avg"] = holiday_profile["avg"].round(3)
-    # Add dayofweek as -1 for holidays (since it varies)
-    holiday_profile["dayofweek"] = -1
-    
-    # Combine both profiles
-    profile = pd.concat([regular_profile, holiday_profile], ignore_index=True)
-    
-    zones_df = pd.read_csv(LOOKUP_PATH).rename(
-        columns={"LocationID": "zone_id", "Zone": "name",
-                 "Borough": "borough", "service_zone": "service_zone"}
-    )
-    print(f"[NYC Cab Analytics] Profile ready — {len(profile):,} rows, {profile['PULocationID'].nunique()} zones")
-    print(f"[NYC Cab Analytics]   Regular days: {len(regular_profile):,} rows")
-    print(f"[NYC Cab Analytics]   Holidays: {len(holiday_profile):,} rows")
-    return profile, zones_df
+    try:
+        df = pd.read_parquet(
+            DATA_PATH,
+            columns=["PULocationID", "hour", "dayofweek", "trip_count", "is_holiday", "time_bucket"],
+        )
+        df['time_bucket'] = pd.to_datetime(df['time_bucket'])
+
+        # Validate and degrade gracefully before building the profile
+        validation = _validate_demand_df(df)
+        _startup_validation = {**validation, "load_failed": False}
+        if not validation['is_valid']:
+            for issue in validation['issues']:
+                logger.warning(
+                    f"[data quality] {issue['severity'].upper()} — {issue['type']}: {issue['count']} rows affected"
+                )
+            df = _apply_degradation(df, validation['issues'])
+            logger.info("[data quality] Graceful degradation applied — API continuing with cleaned data")
+        else:
+            logger.info("[data quality] Data validation passed")
+
+        # Identify specific holidays
+        df['holiday_name'] = df.apply(
+            lambda row: _identify_holiday(row['time_bucket']) if row['is_holiday'] == 1 else "regular",
+            axis=1
+        )
+
+        # Profile 1: Regular days (non-holidays)
+        regular_df = df[df["is_holiday"] == 0].drop(columns=["is_holiday", "time_bucket", "holiday_name"])
+        regular_profile = (
+            regular_df.groupby(["PULocationID", "hour", "dayofweek"], as_index=False)["trip_count"]
+            .mean()
+            .rename(columns={"trip_count": "avg"})
+        )
+        regular_profile["avg"] = regular_profile["avg"].round(3)
+        regular_profile["holiday_name"] = "regular"
+
+        # Profile 2: Holiday-specific demand
+        holiday_df = df[df["is_holiday"] == 1].copy()
+        holiday_profile = (
+            holiday_df.groupby(["PULocationID", "hour", "holiday_name"], as_index=False)["trip_count"]
+            .mean()
+            .rename(columns={"trip_count": "avg"})
+        )
+        holiday_profile["avg"] = holiday_profile["avg"].round(3)
+        holiday_profile["dayofweek"] = -1
+
+        profile = pd.concat([regular_profile, holiday_profile], ignore_index=True)
+
+        zones_df = pd.read_csv(LOOKUP_PATH).rename(
+            columns={"LocationID": "zone_id", "Zone": "name",
+                     "Borough": "borough", "service_zone": "service_zone"}
+        )
+        print(f"[NYC Cab Analytics] Profile ready — {len(profile):,} rows, {profile['PULocationID'].nunique()} zones")
+        print(f"[NYC Cab Analytics]   Regular days: {len(regular_profile):,} rows")
+        print(f"[NYC Cab Analytics]   Holidays: {len(holiday_profile):,} rows")
+
+        _last_valid_data = (profile, zones_df)
+        return profile, zones_df
+
+    except Exception as e:
+        return _get_last_valid_or_raise(e)
 
 
 def _load_model():

@@ -1,0 +1,52 @@
+{
+  "status": "fail",
+  "checks_run": 4,
+  "num_issues": 4,
+  "issues": [
+    {
+      "type": "duplicates",
+      "severity": "high",
+      "description": "10,085 duplicate (PULocationID, time_bucket) rows across 5 zones \u2014 demand predictions will be inflated ~2x for those zones",
+      "count": 10085,
+      "affected_zones": [
+        4,
+        43,
+        87,
+        107,
+        229
+      ]
+    },
+    {
+      "type": "out_of_range_trip_count",
+      "severity": "critical",
+      "description": "353 rows with negative trip_count (min=-5) \u2014 negative trip counts are physically impossible",
+      "count": 353,
+      "direction": "negative",
+      "min_value": -5
+    },
+    {
+      "type": "out_of_range_trip_count",
+      "severity": "critical",
+      "description": "311 rows with trip_count > 5000 (max=99999, baseline max=18) \u2014 corrupts LightGBM feature scaling and target distribution",
+      "count": 311,
+      "direction": "extreme_high",
+      "threshold": 5000,
+      "max_value": 99999
+    },
+    {
+      "type": "holiday_mislabeling",
+      "severity": "medium",
+      "description": "142,752 rows (2.26% of dataset) have is_holiday=1 on non-holiday dates \u2014 holiday surge pricing logic fires on normal commuter demand",
+      "count": 142752,
+      "false_holiday_rate": 0.02255,
+      "example_false_dates": {
+        "2026-02-16": 5952,
+        "2023-05-29": 5472,
+        "2026-01-21": 5472,
+        "2026-01-19": 5472,
+        "2026-01-18": 5472
+      }
+    }
+  ],
+  "baseline_valid": true
+}
