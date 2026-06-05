@@ -1,0 +1,157 @@
+{
+  "run_at": "2026-06-05T00:55:24.348040+00:00",
+  "baseline_period": "2026-01-01 to 2026-01-15",
+  "new_data_period": "2026-02-02 to 2026-02-28",
+  "patterns_confirmed": 4,
+  "patterns": {
+    "temporal_peak_shift": {
+      "pattern": "temporal_peak_shift",
+      "description": "Early morning (5-7am) demand boosted; late morning (9-11am) reduced",
+      "type": "data_drift",
+      "early_slot_mean_baseline": 2.82,
+      "early_slot_mean_new": 3.62,
+      "early_slot_change_pct": 28.1,
+      "late_slot_mean_baseline": 14.94,
+      "late_slot_mean_new": 8.61,
+      "late_slot_change_pct": -42.4,
+      "ks_early": {
+        "feature": "trip_count_early_slots",
+        "ks_statistic": 0.0513,
+        "p_value": 1.723571798629017e-10,
+        "drifted": true,
+        "interpretation": "significant drift"
+      },
+      "ks_late": {
+        "feature": "trip_count_late_slots",
+        "ks_statistic": 0.1838,
+        "p_value": 1.8318128047917044e-130,
+        "drifted": true,
+        "interpretation": "significant drift"
+      },
+      "drift_confirmed": true,
+      "impact": "Temporal demand pattern shifted; models trained on normal peaks will mispredict commute hours"
+    },
+    "manhattan_lag_deflation": {
+      "pattern": "manhattan_lag_deflation",
+      "description": "Manhattan lag features deflated to ~55% of baseline",
+      "type": "data_drift",
+      "borough": "Manhattan (borough_id=0)",
+      "features": {
+        "lag_1day": {
+          "baseline_mean": 13.491,
+          "new_mean": 7.573,
+          "change_pct": "-43.9",
+          "feature": "lag_1day",
+          "ks_statistic": 0.1603,
+          "p_value": 0.0,
+          "drifted": true,
+          "interpretation": "significant drift",
+          "psi": 0.2223
+        },
+        "lag_1week": {
+          "baseline_mean": 11.554,
+          "new_mean": 7.798,
+          "change_pct": "-32.5",
+          "feature": "lag_1week",
+          "ks_statistic": 0.1078,
+          "p_value": 0.0,
+          "drifted": true,
+          "interpretation": "significant drift",
+          "psi": 0.1198
+        },
+        "roll_mean_1day": {
+          "baseline_mean": 13.617,
+          "new_mean": 7.587,
+          "change_pct": "-44.3",
+          "feature": "roll_mean_1day",
+          "ks_statistic": 0.2434,
+          "p_value": 0.0,
+          "drifted": true,
+          "interpretation": "significant drift",
+          "psi": 0.484
+        }
+      },
+      "drift_confirmed": true,
+      "impact": "Model underestimates Manhattan demand; lag inputs are systematically low"
+    },
+    "outer_borough_scramble": {
+      "pattern": "outer_borough_baseline_scramble",
+      "description": "Queens/Brooklyn zone_slot_baseline scrambled (0.22x and 3.8x per zone)",
+      "type": "data_drift",
+      "boroughs": {
+        "Queens": {
+          "feature": "zone_slot_baseline_queens",
+          "ks_statistic": 0.25,
+          "p_value": 1.0,
+          "drifted": false,
+          "interpretation": "no significant drift",
+          "scrambled_zones": 0,
+          "total_zones": 4,
+          "baseline_feature_target_corr": 0.4108,
+          "new_feature_target_corr": 0.4215,
+          "corr_degradation": 0.0107
+        },
+        "Brooklyn": {
+          "feature": "zone_slot_baseline_brooklyn",
+          "ks_statistic": 1.0,
+          "p_value": 1.0,
+          "drifted": true,
+          "interpretation": "no significant drift",
+          "scrambled_zones": 0,
+          "total_zones": 1,
+          "baseline_feature_target_corr": 0.7865,
+          "new_feature_target_corr": 0.6297,
+          "corr_degradation": -0.1567
+        }
+      },
+      "drift_confirmed": true,
+      "impact": "Feature-target correlation broken in outer boroughs; predictions unreliable"
+    },
+    "manhattan_weekend_concept_drift": {
+      "pattern": "manhattan_weekend_concept_drift",
+      "description": "Manhattan weekend demand fell to ~72% of baseline (tourism + hybrid work shift)",
+      "type": "concept_drift",
+      "borough": "Manhattan (borough_id=0)",
+      "weekend_mean_baseline": 13.02,
+      "weekend_mean_new": 8.95,
+      "weekend_change_pct": -31.3,
+      "weekday_change_pct": -3.7,
+      "ks_weekend": {
+        "feature": "trip_count_manhattan_weekend",
+        "ks_statistic": 0.105,
+        "p_value": 2.489164877630822e-122,
+        "drifted": true,
+        "interpretation": "significant drift"
+      },
+      "ks_weekday": {
+        "feature": "trip_count_manhattan_weekday",
+        "ks_statistic": 0.026,
+        "p_value": 3.2996148188428438e-21,
+        "drifted": true,
+        "interpretation": "significant drift"
+      },
+      "baseline_mae_rate_weekend": 0.7404,
+      "new_mae_rate_weekend": 0.934,
+      "accuracy_degradation": 0.1936,
+      "drift_confirmed": true,
+      "impact": "Model over-predicts Manhattan weekends by ~28%; trained on pre-Feb patterns"
+    }
+  },
+  "concept_drift_by_borough": {
+    "0": {
+      "baseline_mae_rate": 0.8517,
+      "new_mae_rate": 0.7849,
+      "degradation": -0.0668
+    },
+    "1": {
+      "baseline_mae_rate": 0.5244,
+      "new_mae_rate": 0.97,
+      "degradation": 0.4456
+    },
+    "2": {
+      "baseline_mae_rate": 0.1365,
+      "new_mae_rate": 0.1231,
+      "degradation": -0.0135
+    }
+  }
+}

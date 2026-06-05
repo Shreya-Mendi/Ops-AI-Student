@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" font-family="'Helvetica Neue', Arial, sans-serif">
+
+  <!-- Background -->
+  <rect width="960" height="640" fill="#f7f8fa" rx="10"/>
+
+  <!-- Title -->
+  <text x="480" y="40" text-anchor="middle" font-size="18" font-weight="700" fill="#1a1a2e">Demand API — Deployment Architecture</text>
+  <text x="480" y="62" text-anchor="middle" font-size="11" fill="#6c757d" letter-spacing="0.3">GitHub Actions · Artifact Registry · GKE · GCS · ops-ai-shreya</text>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- COLUMN 1: CI/CD                            -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <!-- GitHub -->
+  <rect x="40" y="100" width="150" height="64" rx="9" fill="#24292e" stroke="#444d56" stroke-width="1.5"/>
+  <text x="115" y="126" text-anchor="middle" font-size="13" font-weight="700" fill="white">GitHub</text>
+  <text x="115" y="146" text-anchor="middle" font-size="10" fill="#8b949e">push → week2 / main</text>
+
+  <!-- Arrow GitHub → Actions -->
+  <line x1="115" y1="164" x2="115" y2="202" stroke="#555" stroke-width="2" marker-end="url(#a-gray)"/>
+  <text x="122" y="187" font-size="9" fill="#555">trigger</text>
+
+  <!-- GitHub Actions -->
+  <rect x="40" y="202" width="150" height="64" rx="9" fill="#2088ff" stroke="#1a6fd8" stroke-width="1.5"/>
+  <text x="115" y="228" text-anchor="middle" font-size="13" font-weight="700" fill="white">GitHub Actions</text>
+  <text x="115" y="248" text-anchor="middle" font-size="10" fill="#cce4ff">CI · CD workflows</text>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- COLUMN 2: Artifact Registry + GCS          -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <!-- Artifact Registry -->
+  <rect x="380" y="100" width="190" height="64" rx="9" fill="#4a148c" stroke="#6a1b9a" stroke-width="1.5"/>
+  <text x="475" y="126" text-anchor="middle" font-size="13" font-weight="700" fill="white">Artifact Registry</text>
+  <text x="475" y="144" text-anchor="middle" font-size="9.5" fill="#e1bee7">docker-repo / demand-api</text>
+  <text x="475" y="157" text-anchor="middle" font-size="9" fill="#ce93d8">:latest · :&lt;git-sha&gt;</text>
+
+  <!-- GCS Bucket -->
+  <rect x="380" y="420" width="190" height="64" rx="9" fill="#e65100" stroke="#bf360c" stroke-width="1.5"/>
+  <text x="475" y="447" text-anchor="middle" font-size="13" font-weight="700" fill="white">GCS Bucket</text>
+  <text x="475" y="465" text-anchor="middle" font-size="9.5" fill="#ffe0b2">ops-ai-shreya-data</text>
+  <text x="475" y="478" text-anchor="middle" font-size="9" fill="#ffcc80">model · data · lookup CSV · geojson</text>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- COLUMN 3: GKE Cluster                      -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <!-- GKE bounding box -->
+  <rect x="650" y="80" width="280" height="460" rx="12" fill="#e8f5e9" stroke="#a5d6a7" stroke-width="1.5" stroke-dasharray="7,4"/>
+  <text x="790" y="103" text-anchor="middle" font-size="10.5" font-weight="700" fill="#2e7d32" letter-spacing="0.8">GKE CLUSTER — operationalizing-ai</text>
+
+  <!-- Init Container -->
+  <rect x="672" y="118" width="236" height="50" rx="8" fill="#fff8e1" stroke="#f9a825" stroke-width="1.5"/>
+  <text x="790" y="139" text-anchor="middle" font-size="11" font-weight="700" fill="#f57f17">Init Container</text>
+  <text x="790" y="157" text-anchor="middle" font-size="9.5" fill="#795548">gsutil cp — downloads all files from GCS</text>
+
+  <!-- emptyDir volume -->
+  <rect x="707" y="188" width="166" height="34" rx="7" fill="#f3e5f5" stroke="#ab47bc" stroke-width="1.3"/>
+  <text x="790" y="203" text-anchor="middle" font-size="10" font-weight="600" fill="#6a1b9a">emptyDir volume</text>
+  <text x="790" y="216" text-anchor="middle" font-size="8.5" fill="#9c27b0">/data/processed · /metadata/Lookups</text>
+
+  <!-- Pod 1 -->
+  <rect x="665" y="242" width="120" height="64" rx="8" fill="white" stroke="#66bb6a" stroke-width="1.5"/>
+  <text x="725" y="263" text-anchor="middle" font-size="11" font-weight="700" fill="#2e7d32">Pod 1</text>
+  <text x="725" y="279" text-anchor="middle" font-size="9.5" fill="#444">demand-api</text>
+  <text x="725" y="295" text-anchor="middle" font-size="8.5" fill="#888">FastAPI · :8000</text>
+
+  <!-- Pod 2 -->
+  <rect x="800" y="242" width="120" height="64" rx="8" fill="white" stroke="#66bb6a" stroke-width="1.5"/>
+  <text x="860" y="263" text-anchor="middle" font-size="11" font-weight="700" fill="#2e7d32">Pod 2</text>
+  <text x="860" y="279" text-anchor="middle" font-size="9.5" fill="#444">demand-api</text>
+  <text x="860" y="295" text-anchor="middle" font-size="8.5" fill="#888">FastAPI · :8000</text>
+
+  <!-- ConfigMap -->
+  <rect x="707" y="330" width="166" height="36" rx="7" fill="#fce4ec" stroke="#e91e63" stroke-width="1.2"/>
+  <text x="790" y="347" text-anchor="middle" font-size="10" font-weight="600" fill="#880e4f">ConfigMap</text>
+  <text x="790" y="360" text-anchor="middle" font-size="8.5" fill="#c2185b">GCS_BUCKET env var</text>
+
+  <!-- LoadBalancer -->
+  <rect x="690" y="390" width="200" height="52" rx="9" fill="#0d47a1" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="790" y="412" text-anchor="middle" font-size="12" font-weight="700" fill="white">LoadBalancer</text>
+  <text x="790" y="430" text-anchor="middle" font-size="9.5" fill="#90caf9">136.112.78.118 : 80 → 8000</text>
+
+  <!-- Secrets -->
+  <rect x="707" y="464" width="166" height="36" rx="7" fill="#e8eaf6" stroke="#7986cb" stroke-width="1.2"/>
+  <text x="790" y="481" text-anchor="middle" font-size="10" font-weight="600" fill="#283593">K8s Secrets</text>
+  <text x="790" y="494" text-anchor="middle" font-size="8.5" fill="#3949ab">artifact-registry · gcs-sa-key</text>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- BOTTOM: External Client                    -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <rect x="706" y="568" width="168" height="46" rx="9" fill="#37474f" stroke="#546e7a" stroke-width="1.5"/>
+  <text x="790" y="588" text-anchor="middle" font-size="12" font-weight="700" fill="white">External Client</text>
+  <text x="790" y="604" text-anchor="middle" font-size="9.5" fill="#b0bec5">HTTP requests / curl</text>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- ARROWS                                     -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <!-- GitHub Actions → Artifact Registry (build & push) -->
+  <path d="M 190 222 Q 280 180 380 138" fill="none" stroke="#2088ff" stroke-width="2" marker-end="url(#a-blue)"/>
+  <text x="268" y="178" font-size="9" fill="#2088ff" text-anchor="middle">build &amp; push</text>
+
+  <!-- GitHub Actions → GKE (kubectl apply + set image) -->
+  <path d="M 190 248 Q 420 310 650 340" fill="none" stroke="#2088ff" stroke-width="1.8" stroke-dasharray="6,3" marker-end="url(#a-blue)"/>
+  <text x="400" y="292" font-size="9" fill="#2088ff" text-anchor="middle">kubectl apply · set image</text>
+
+  <!-- Artifact Registry → Init Container (pull image) -->
+  <line x1="570" y1="140" x2="670" y2="140" stroke="#7b1fa2" stroke-width="2" marker-end="url(#a-purple)"/>
+  <text x="620" y="133" font-size="9" fill="#7b1fa2" text-anchor="middle">pull image</text>
+
+  <!-- Artifact Registry → Pods (pull image) -->
+  <path d="M 570 155 Q 615 240 665 265" fill="none" stroke="#7b1fa2" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#a-purple)"/>
+
+  <!-- GCS → Init Container (download data) -->
+  <line x1="475" y1="420" x2="475" y2="220" stroke="#e65100" stroke-width="1.5" stroke-dasharray="1,0"/>
+  <path d="M 475 220 Q 560 168 670 143" fill="none" stroke="#e65100" stroke-width="2" marker-end="url(#a-orange)"/>
+  <text x="390" y="312" font-size="9" fill="#e65100" text-anchor="middle">download at startup</text>
+
+  <!-- Init Container → volume -->
+  <line x1="790" y1="168" x2="790" y2="188" stroke="#f9a825" stroke-width="1.8" marker-end="url(#a-yellow)"/>
+
+  <!-- volume → Pod 1 -->
+  <line x1="745" y1="222" x2="725" y2="242" stroke="#ab47bc" stroke-width="1.4" stroke-dasharray="3,2" marker-end="url(#a-purple)"/>
+
+  <!-- volume → Pod 2 -->
+  <line x1="835" y1="222" x2="855" y2="242" stroke="#ab47bc" stroke-width="1.4" stroke-dasharray="3,2" marker-end="url(#a-purple)"/>
+
+  <!-- Pod 1 → LoadBalancer -->
+  <line x1="725" y1="306" x2="752" y2="390" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#a-green)"/>
+
+  <!-- Pod 2 → LoadBalancer -->
+  <line x1="860" y1="306" x2="828" y2="390" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#a-green)"/>
+
+  <!-- ConfigMap → Pods (env inject) -->
+  <line x1="790" y1="330" x2="790" y2="308" stroke="#e91e63" stroke-width="1.2" stroke-dasharray="3,2" marker-end="url(#a-pink)"/>
+
+  <!-- LoadBalancer → Client -->
+  <line x1="790" y1="442" x2="790" y2="568" stroke="#0d47a1" stroke-width="2" marker-end="url(#a-dark)"/>
+  <text x="800" y="510" font-size="9" fill="#0d47a1">HTTP :80</text>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- LEGEND                                     -->
+  <!-- ═══════════════════════════════════════════ -->
+  <rect x="40" y="420" width="290" height="150" rx="9" fill="white" stroke="#dee2e6" stroke-width="1.2"/>
+  <text x="185" y="442" text-anchor="middle" font-size="11" font-weight="700" fill="#333">Legend</text>
+
+  <line x1="58" y1="462" x2="95" y2="462" stroke="#2088ff" stroke-width="2"/>
+  <text x="105" y="466" font-size="9.5" fill="#333">Build / deploy (GitHub Actions)</text>
+
+  <line x1="58" y1="484" x2="95" y2="484" stroke="#7b1fa2" stroke-width="2"/>
+  <text x="105" y="488" font-size="9.5" fill="#333">Image pull (Artifact Registry)</text>
+
+  <line x1="58" y1="506" x2="95" y2="506" stroke="#e65100" stroke-width="2"/>
+  <text x="105" y="510" font-size="9.5" fill="#333">Data download (GCS → init container)</text>
+
+  <line x1="58" y1="528" x2="95" y2="528" stroke="#2e7d32" stroke-width="2"/>
+  <text x="105" y="532" font-size="9.5" fill="#333">Traffic routing (pods → LB → client)</text>
+
+  <line x1="58" y1="550" x2="95" y2="550" stroke="#888" stroke-width="1.4" stroke-dasharray="4,2"/>
+  <text x="105" y="554" font-size="9.5" fill="#333">Volume mount / config injection</text>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- ARROWHEAD DEFS                             -->
+  <!-- ═══════════════════════════════════════════ -->
+  <defs>
+    <marker id="a-gray"   markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#555"/></marker>
+    <marker id="a-blue"   markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#2088ff"/></marker>
+    <marker id="a-purple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#7b1fa2"/></marker>
+    <marker id="a-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#e65100"/></marker>
+    <marker id="a-yellow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#f9a825"/></marker>
+    <marker id="a-green"  markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#2e7d32"/></marker>
+    <marker id="a-pink"   markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#e91e63"/></marker>
+    <marker id="a-dark"   markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#0d47a1"/></marker>
+  </defs>
+
+</svg>
