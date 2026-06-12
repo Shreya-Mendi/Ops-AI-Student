@@ -53,12 +53,12 @@ def main():
             )
         except Exception as e:
             print(f"     ERROR: {e}")
-        print()
-        # Free tier allows 5 requests/min and each query uses ~2 LLM calls.
-        # Pace ~30s between queries to stay under the limit. The agent also
-        # auto-retries on 429, so this is belt-and-suspenders.
+        print(flush=True)
+        # Free tier allows only 5 requests/min and each query uses 2+ LLM calls.
+        # Pace 60s between queries so the per-minute quota fully resets. The
+        # agent also auto-retries on 429, so this is belt-and-suspenders.
         if i < len(TEST_QUERIES):
-            time.sleep(30)
+            time.sleep(60)
 
     print("=" * 70)
     m = agent.get_metrics()
