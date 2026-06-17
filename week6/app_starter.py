@@ -423,6 +423,12 @@ tool or give the final ANSWER."""
             else:
                 tools_used.append(tool_name)
                 tool_result = tool.execute(**args)
+                # Guardrail (pre-LLM): redact sensitive fields from the tool
+                # result BEFORE the model sees them, so the LLM can never echo
+                # a value the role isn't allowed to view (even in prose).
+                tool_result = self.access_controller.redact_response(
+                    user_role, tool_result
+                )
 
             # Feed the tool result back into the conversation.
             conversation += (
