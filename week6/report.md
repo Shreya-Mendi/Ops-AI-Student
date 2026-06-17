@@ -140,14 +140,33 @@ DEMO C — Cost Enforcement (engineer budget = $100/month)
 
 ### 4e. Live agent — access control end-to-end (Demo A)
 
-<!-- FILL IN: paste Demo A output (engineer vs hr salary query) here -->
+Same query, two roles. The salary is redacted from the tool result **before** the
+LLM sees it, so an engineer's answer cannot contain the value:
 
-_(Live agent output — same salary query, engineer sees `[REDACTED]`, hr sees the
-value — inserted from the run.)_
+```
+[engineer] Q: Look up the employee named Brian Yang and show their salary.
+    A: I found Brian Yang's information, but their salary is redacted and
+       cannot be displayed.
+    tools=['employee_lookup'] cost=$0.000059 budget_left=$100.00
+
+[hr] Q: Look up the employee named Brian Yang and show their salary.
+    A: Brian Yang's salary is 467621.
+    tools=['employee_lookup'] cost=$0.000058 budget_left=$200.00
+```
+
+This is the key result: **the engineer literally cannot obtain the salary**, because
+the `[REDACTED]` substitution happens on the tool output, not just on the final
+answer. The LLM never receives the number, so it can't leak it in prose. HR, who is
+in the `salary` visibility list, gets the full value.
 
 ### 4f. Audit log sample
 
-<!-- FILL IN: paste audit log tail from demo -->
+Every denied access is logged with a timestamp:
+
+```
+{'timestamp': '2026-06-17T00:09:04+00:00', 'role': 'engineer',
+ 'resource': 'response', 'field': 'salary', 'allowed': False}
+```
 
 ---
 
